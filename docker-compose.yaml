@@ -1,0 +1,47 @@
+version: "3.7"
+services:
+  db:
+    image: "postgres"
+    volumes:
+      - "./data/db:/var/lib/postgresql/data"
+    environment:
+      - "POSTGRES_DB=postgres"
+      - "POSTGRES_USER=postgres"
+      - "POSTGRES_PASSWORD=postgres"
+    ports:
+      - "5432:5432"
+  web:
+    build: "."
+    image: "todo_app:latest"
+    restart: "always"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ".:/usr/src/app"
+    environment:
+      - "DB_HOST=db"
+      - "DB_NAME=postgres"
+      - "DB_USER=postgres"
+      - "DB_PASSWORD=postgres"
+    command: bash -c "python3 manage.py runserver [::]:8000"
+    depends_on:
+      - "db"
+
+  redis:
+   image: 'bitnami/redis:latest'
+   ports:
+     - '6379:6379'
+   environment:
+     - ALLOW_EMPTY_PASSWORD=yes
+   depends_on:
+     - "web"
+
+  celery:
+   image: "todo_app:latest"
+   restart: "always"
+   volumes:
+     - ".:/usr/src/app"
+   command: bash -c "celery -A todo_app worker -l INFO"
+   depends_on:
+     - "redis"
+
